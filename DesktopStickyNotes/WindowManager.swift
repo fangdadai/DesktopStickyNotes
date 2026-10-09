@@ -8,6 +8,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
     private var windows: [UUID: NSWindow] = [:]
     private var subscription: AnyCancellable?
     private var libraryWindow: NSWindow?
+    private var calendarWindow: NSWindow?
 
     init(store: NoteStore) {
         self.store = store
@@ -42,6 +43,26 @@ final class WindowManager: NSObject, NSWindowDelegate {
         synchronize()
     }
 
+    func showCalendar() {
+        if calendarWindow == nil {
+            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 760, height: 700),
+                                  styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                                  backing: .buffered, defer: false)
+            window.title = "Calendar — DesktopStickyNotes"
+            window.isReleasedWhenClosed = false
+            window.minSize = NSSize(width: 620, height: 620)
+            window.contentView = NSHostingView(rootView: NotesCalendarView(store: store, manager: self))
+            window.center()
+            calendarWindow = window
+        }
+        calendarWindow?.deminiaturize(nil)
+        if let window = calendarWindow {
+            window.setFrame(StickyNote.constrainedFrame(window.frame, screens: NSScreen.screens.map(\.visibleFrame)), display: true)
+            window.makeKeyAndOrderFront(nil)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     func synchronize() {
         for id in Array(windows.keys) where store.note(id) == nil {
             windows.removeValue(forKey: id)?.close()
@@ -74,8 +95,8 @@ final class WindowManager: NSObject, NSWindowDelegate {
         return window
     }
 
-    func newNote() {
-        let note = store.createNote()
+    func newNote(deadline: Date? = nil) {
+        let note = store.createNote(deadline: deadline)
         let screen = NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1440, height: 900)
         let offset = CGFloat((store.notes.count - 1) % 8) * 24
         store.update(note.id) {

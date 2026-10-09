@@ -59,6 +59,8 @@ struct NoteCommands: Commands {
         CommandMenu("Notes") {
             Button("Manage Notes") { manager.showLibrary() }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
+            Button("Calendar") { manager.showCalendar() }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
             Divider()
             Button("Show All Notes") {
                 for note in store.notes { manager.restore(note.id) }

@@ -13,11 +13,19 @@ struct NotesLibraryView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
+                Button { manager.showCalendar() } label: { Label("Calendar", systemImage: "calendar") }
+                    .help("Calendar (⇧⌘C)")
                 Button { manager.newNote() } label: { Label("New Note", systemImage: "plus") }
                     .buttonStyle(.borderedProminent).controlSize(.regular)
             }
             .padding(.horizontal, 20).padding(.vertical, 16)
             Divider()
+            let reviewCount = store.notes.filter(\.deadlineNeedsReview).count
+            if reviewCount > 0 {
+                Text("\(reviewCount) \(reviewCount == 1 ? "note needs" : "notes need") a deadline review. Open a note to choose its deadline.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .padding(.horizontal, 20).padding(.vertical, 10)
+            }
             if store.notes.isEmpty {
                 ContentUnavailableView {
                     Label("No notes yet", systemImage: "note.text")
@@ -39,24 +47,17 @@ struct NotesLibraryView: View {
                                 Text(note.displayTitle).font(.system(size: 14, weight: .semibold)).lineLimit(1)
                                 Text(note.content.isEmpty ? "Empty note" : note.content.replacingOccurrences(of: "\n", with: " "))
                                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                                if note.priority != nil || note.deadline != nil {
-                                    HStack(spacing: 10) {
-                                        if let priority = note.priority {
-                                            Label(priority.name, systemImage: "flag.fill")
-                                                .fixedSize()
-                                                .accessibilityLabel("\(priority.name) priority")
-                                        }
-                                        if let deadline = note.deadline {
-                                            Label {
-                                                Text(deadline, format: .dateTime.month(.abbreviated).day().hour().minute())
-                                            } icon: { Image(systemName: "calendar") }
-                                            .lineLimit(1)
-                                            .help(deadline.formatted(date: .abbreviated, time: .shortened))
-                                            .accessibilityLabel("Deadline: " + deadline.formatted(date: .abbreviated, time: .shortened))
-                                        }
-                                    }
-                                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                                HStack(spacing: 10) {
+                                    PriorityLabel(priority: note.priority).fixedSize()
+                                    Label {
+                                        Text(note.deadline, format: .dateTime.month(.abbreviated).day().hour().minute())
+                                    } icon: { Image(systemName: "calendar") }
+                                    .lineLimit(1)
+                                    .help(note.deadline.formatted(date: .abbreviated, time: .shortened))
+                                    .accessibilityLabel("Deadline: " + note.deadline.formatted(date: .abbreviated, time: .shortened))
+                                    if note.deadlineNeedsReview { Text("Review") }
                                 }
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())

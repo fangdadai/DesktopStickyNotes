@@ -27,11 +27,16 @@ final class NoteStore: ObservableObject {
 
     func note(_ id: UUID) -> StickyNote? { notes.first { $0.id == id } }
 
-    @discardableResult func createNote() -> StickyNote {
-        let note = StickyNote()
+    @discardableResult func createNote(deadline: Date? = nil) -> StickyNote {
+        var note = StickyNote()
+        if let deadline { note.deadline = deadline }
         notes.append(note)
         scheduleSave()
         return note
+    }
+
+    func setDeadline(_ id: UUID, to deadline: Date) {
+        update(id) { $0.deadline = deadline; $0.deadlineNeedsReview = false }
     }
 
     func update(_ id: UUID, _ change: (inout StickyNote) -> Void) {

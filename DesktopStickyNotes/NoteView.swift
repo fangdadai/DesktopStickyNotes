@@ -4,7 +4,6 @@ struct NoteView: View {
     let id: UUID
     @ObservedObject var store: NoteStore
     let manager: WindowManager
-    @State private var showsDeadline = false
     private let ink = Color(red: 0.20, green: 0.18, blue: 0.15)
 
     var body: some View {
@@ -29,6 +28,7 @@ struct NoteView: View {
                         }
                         Divider()
                         Button("Manage Notes") { manager.showLibrary() }
+                        Button("Calendar") { manager.showCalendar() }
                         Button("Hide Note") { manager.hide(id) }
                         Button("Delete Note…", role: .destructive) { manager.confirmDelete(id) }
                     } label: { Image(systemName: "ellipsis").frame(width: 24, height: 24) }
@@ -59,49 +59,20 @@ struct NoteView: View {
                 .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 10)
 
                 HStack(spacing: 12) {
-                    Button { showsDeadline.toggle() } label: {
-                        Label {
-                            if let deadline = note.deadline {
-                                Text(deadline, format: .dateTime.month(.abbreviated).day())
-                            } else {
-                                Text("Add deadline")
-                            }
-                        } icon: { Image(systemName: "calendar") }
-                        .lineLimit(1)
-                    }
-                    .buttonStyle(.plain)
-                    .help(note.deadline?.formatted(date: .abbreviated, time: .shortened) ?? "Add deadline")
-                    .accessibilityLabel(note.deadline.map { "Deadline: " + $0.formatted(date: .abbreviated, time: .shortened) } ?? "Add deadline")
-                    .popover(isPresented: $showsDeadline, arrowEdge: .bottom) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Deadline").font(.headline)
-                            Toggle("Set a deadline", isOn: Binding(get: { store.note(id)?.deadline != nil }, set: { enabled in
-                                store.update(id) { $0.deadline = enabled ? Date() : nil }
-                            }))
-                            .toggleStyle(.checkbox)
-                            if store.note(id)?.deadline != nil {
-                                DatePicker("Deadline date and time", selection: Binding(get: { store.note(id)?.deadline ?? Date() }, set: { value in
-                                    store.update(id) { $0.deadline = value }
-                                }), displayedComponents: [.date, .hourAndMinute])
-                                .datePickerStyle(.field).labelsHidden()
-                                .accessibilityLabel("Deadline date and time")
-                            }
-                        }
-                        .padding(16).frame(width: 260, alignment: .leading)
-                    }
+                    DeadlineButton(id: id, store: store)
                     Spacer(minLength: 0)
                     Menu {
                         Picker("Priority", selection: Binding<NotePriority?>(get: { store.note(id)?.priority }, set: { priority in
                             store.update(id) { $0.priority = priority }
                         })) {
-                            Text("None").tag(Optional<NotePriority>.none)
+                            PriorityLabel(priority: nil).tag(Optional<NotePriority>.none)
                             ForEach(NotePriority.allCases) { priority in
-                                Text(priority.name).tag(Optional(priority))
+                                PriorityLabel(priority: priority).tag(Optional(priority))
                             }
                         }
                         .pickerStyle(.inline)
                     } label: {
-                        Label(note.priority?.name ?? "Priority", systemImage: note.priority == nil ? "flag" : "flag.fill")
+                        PriorityLabel(priority: note.priority, unassignedTitle: "Priority")
                     }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                     .help("Set priority")
